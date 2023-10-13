@@ -1,23 +1,22 @@
 #ifndef PUZZLE_H
 #define PUZZLE_H
 
-typedef struct nodeLinkedList node_l;
-int deleteatbeginning();
-int insertatend(int currentPosition, int width);
-int findinlist(int data);
-int sortList();
-int solvePuzzle(char * puzzleFrame, int width, int height);
-int findSolution(char * puzzleFrame, int width, int height);
-int generateSolution(char * puzzleFrame, int width, int height);
 int generateBranches(char * puzzleFrame, int width, int height);
 char * generateBranchesHelper(char * puzzleFrame, int width, int height, int * quadrantPosition);
+char * generateSolution(char * puzzleFrame, int width, int height);
+char * findSolution(char * puzzleFrame, int width, int height, int position);
 char * removeWideSpace(char * puzzleFrame, int width, int height);
 char * removeWideSpaceHelper(char * puzzleFrame, int quadrantPosition, int width);
-char * generateStartEnd(char puzzleFrame[], int width, int height, char point);
+char * smartRemoveWideSpace(char * puzzleFrame, int width, int height);
+char * smartRemoveWideSpaceHelper(char * puzzleFrame, int position, int width);
+char * generateStartEnd(char * puzzleFrame, int width, int height, char point);
+char * removeAtSign(char * puzzleFrame, int width, int height, int position);
+char * freeExits(char * puzzleFrame, int width, int height, int position);
+char * removeDiagonalDollar(char * puzzleFrame, int width, int height, int position);
 void generateMap();
-void printList();
-void filterEdge(char puzzleFrame[], int width, int height, int startingIndex, char point);
+void filterEdge(char * puzzleFrame, int width, int height, int startingIndex, char point);
 void savePosition(char point, int position, int width);
-void printPuzzleClear(char puzzleFrame[], int width, int height);
+void printPuzzleClear(char * puzzleFrame, int width, int height);
+void printPuzzleSave(char * puzzleFrame, int width, int height);
 
 #endif

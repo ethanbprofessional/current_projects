@@ -1,108 +1,25 @@
 #include "puzzle.h"
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <Windows.h>
+/**
+ * Maze Generator
+ * Created By: Ethan Bown
+ * Last Edited: 10/12/23
+ * Purpose: To randomly create a maze to the best possible degree based on the user's desired size
+ * Should always create a maze that is solvable, but the difficulty of those mazes is random
+ * Saves the maze generated to 'savePuzzles.txt' file
+ * 
+*/
 int currentPosition, endPosition, distanceFromEnd;
-char *storePuzzle;
 time_t toGenerate; // $ = wall, % = temporary wall, * = empty space, # = beginning point, & = end point and - = correct path
-struct nodeLinkedList {
-    int position, y_distance, x_distance;
-    struct nodeLinkedList *next;
-};
-node_l *head = NULL;
 int main(int argc, char const *argv[]) {
     srand((unsigned) time(&toGenerate));
     generateMap();
     return 0;
 }
-void printList() {
-    node_l *pointer = head;
-    printf("\n[");
-    while (pointer != NULL) {
-        printf(" (%d,%d) ", pointer->x_distance, pointer->y_distance);
-        pointer = pointer->next;
-    }
-    printf("]");
-}
-int deleteatbeginning() {
-    if (head == NULL) return -1;
-    int tempData = head->position;
-    node_l *pointer = head;
-    head = head->next;
-    free(pointer);
-    return tempData;
-}
-int findinlist(int data) {
-    node_l *tempPoint = head;
-    if (head == NULL) return 0;
-    while (tempPoint->position != data) {
-        if (tempPoint->next == NULL) break;
-        tempPoint = tempPoint->next;
-    }
-    if (tempPoint->position != data) return 0;
-    return 1;
-}
-int insertatend(int position, int width) {
-    node_l *link = (node_l*) malloc(sizeof(node_l));
-    link->position = position;
-    int count = 0;
-    int target;
-    if (position > endPosition) {
-        distanceFromEnd = endPosition;
-        target = position;
-    } else {
-        distanceFromEnd = position;
-        target = endPosition;
-    } 
-    while (distanceFromEnd / width < target / width) {
-        distanceFromEnd += width;
-        count++;
-    }
-    link->y_distance = count;
-    printf("Current Position: %d, End Position: %d, Target: %d Count: %d", position, endPosition, target, count);
-    if (distanceFromEnd > target) link->x_distance = (distanceFromEnd - target + 1);
-    if (distanceFromEnd < target) link->x_distance = (target - distanceFromEnd + 1);
-    if (distanceFromEnd == target) link->x_distance = 0;
-    Sleep(10);
-    node_l *tempPoint = head;
-    if (tempPoint == NULL) {
-        link->next = head;
-        head = link;
-        return 0;
-    } 
-    while (tempPoint->next != NULL)
-        tempPoint = tempPoint->next;
-    tempPoint->next = link;
-    link->next = NULL;
-    return 0;
-}
-int sortList() {
-    int sum1, sum2;
-    node_l *tempPoint = head;
-    if (head == NULL) return 0;
-    while (tempPoint->next != NULL) {
-        sum1 = tempPoint->x_distance + tempPoint->y_distance;
-        sum2 = tempPoint->next->x_distance + tempPoint->next->y_distance;
-        if (sum2 < sum1) {
-            int tempData = tempPoint->next->y_distance;
-            tempPoint->next->y_distance = tempPoint->y_distance;
-            tempPoint->y_distance = tempData;
-            tempData = tempPoint->next->x_distance;
-            tempPoint->next->x_distance = tempPoint->x_distance;
-            tempPoint->x_distance = tempData;
-            tempData = tempPoint->next->position;
-            tempPoint->next->position = tempPoint->position;
-            tempPoint->position = tempData;
-            tempPoint = head;
-            continue;
-        }
-        tempPoint = tempPoint->next;
-    }
-}
-void printPuzzleClear(char puzzleFrame[], int width, int height) {
+void printPuzzleClear(char * puzzleFrame, int width, int height) { //Prints puzzle to terminal
     char map[width + 4];
     memset(map, '\0', sizeof(map));
     for (int i = 0; i < (width - 1); i++) strcat(map, " ");
@@ -113,7 +30,21 @@ void printPuzzleClear(char puzzleFrame[], int width, int height) {
         printf("\n");  
     }
 }
-void generateMap() {
+void printPuzzleSave(char * puzzleFrame, int width, int height) { // Saves puzzle in a text file
+    FILE *fp;
+    fp = fopen("savePuzzles.txt", "w");
+    char map[width + 4];
+    memset(map, '\0', sizeof(map));
+    for (int i = 0; i < (width - 1); i++) strcat(map, " ");
+    strcat(map, "Map:");
+    fprintf(fp, "%s\n", map);
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) fprintf(fp ," %c", puzzleFrame[i * width + j]);
+        fputs("\n", fp);  
+    }
+    fclose(fp);
+}
+void generateMap() { // Invokes functions to generate map
     int width, height;
     char storeWidth[4], storeHeight[4], *puzzleFrame;
     printf("\nPlease input a width for the board greater or equal to 18: ");
@@ -135,34 +66,28 @@ void generateMap() {
     width += 2;
     height += 2;
     puzzleFrame = (char*) malloc(width * height * sizeof(char));
-    for (int i = 0; i < height; i++)
-        for (int j = 0; j < width; j++) 
-            puzzleFrame[i * width + j] = '*';
-    printPuzzleClear(puzzleFrame, width, height);
+    for (int i = 0; i < (height * width); i++) puzzleFrame[i] = '*';
     filterEdge(puzzleFrame, width, height, 0, '-');
-    printPuzzleClear(puzzleFrame, width, height);
-    puzzleFrame = generateStartEnd(puzzleFrame, width, height, '#');
-    printPuzzleClear(puzzleFrame, width, height); 
-    puzzleFrame = generateStartEnd(puzzleFrame, width, height, '&');
-    printPuzzleClear(puzzleFrame, width, height);
+    generateStartEnd(puzzleFrame, width, height, '#');
+    generateStartEnd(puzzleFrame, width, height, '&');
     filterEdge(puzzleFrame, width, height, 1, '%');
-    printPuzzleClear(puzzleFrame, width, height);
     generateBranches(puzzleFrame, width, height);
-    printPuzzleClear(puzzleFrame, width, height);
-    puzzleFrame = removeWideSpace(puzzleFrame, width, height);
-    printPuzzleClear(puzzleFrame, width, height); 
+    removeWideSpace(puzzleFrame, width, height);
+    generateSolution(puzzleFrame, width, height);
+    smartRemoveWideSpace(puzzleFrame, width, height);
+    freeExits(puzzleFrame, width, height, currentPosition);
+    freeExits(puzzleFrame, width, height, endPosition);
+    printPuzzleSave(puzzleFrame, width, height);
     free(puzzleFrame);
-    free(storePuzzle);
 }
-char * generateStartEnd(char puzzleFrame[], int width, int height, char point) {
+char * generateStartEnd(char * puzzleFrame, int width, int height, char point) { // Adds a start and end position to maze
     int saveRandom; // 0 = Top Row, 1 = Left Collumn, 2 = Bottom Row, 3 = Right Collumn
-    SAMEAREA:
     switch ((rand() % 4)) {
     
     case 0:
         saveRandom = (rand() % width);
         while ((saveRandom <= 1) || (saveRandom >= (width - 2))) saveRandom = (rand() % width);
-        if (puzzleFrame[saveRandom] == '#') goto SAMEAREA;
+        if (puzzleFrame[saveRandom] == '#') generateStartEnd(puzzleFrame, width, height, point);
         puzzleFrame[saveRandom] = point;
         saveRandom += width;
         puzzleFrame[saveRandom] = '-';
@@ -172,7 +97,7 @@ char * generateStartEnd(char puzzleFrame[], int width, int height, char point) {
         saveRandom = (rand() % height);
         while ((saveRandom <= 1) || (saveRandom >= (height - 2))) saveRandom = (rand() % height);
         saveRandom *= width;
-        if (puzzleFrame[saveRandom] == '#') goto SAMEAREA;
+        if (puzzleFrame[saveRandom] == '#') generateStartEnd(puzzleFrame, width, height, point);
         puzzleFrame[saveRandom] = point;
         saveRandom ++;
         puzzleFrame[saveRandom] = '-';
@@ -182,7 +107,7 @@ char * generateStartEnd(char puzzleFrame[], int width, int height, char point) {
         saveRandom = (rand() % width);
         while ((saveRandom <= 1) || (saveRandom >= (width - 2))) saveRandom = (rand() % width);
         saveRandom = (width * (height - 1)) + saveRandom;
-        if (puzzleFrame[saveRandom] == '#') goto SAMEAREA;
+        if (puzzleFrame[saveRandom] == '#') generateStartEnd(puzzleFrame, width, height, point);
         puzzleFrame[saveRandom] = point;
         saveRandom -= width;
         puzzleFrame[saveRandom] = '-';
@@ -192,7 +117,7 @@ char * generateStartEnd(char puzzleFrame[], int width, int height, char point) {
         saveRandom = (rand() % height);
         while ((saveRandom <= 1) || (saveRandom >= (height - 2))) saveRandom = (rand() % height);
         saveRandom = (width - 1) + (saveRandom * width);
-        if (puzzleFrame[saveRandom] == '#') goto SAMEAREA;
+        if (puzzleFrame[saveRandom] == '#') generateStartEnd(puzzleFrame, width, height, point);
         puzzleFrame[saveRandom] = point;
         saveRandom--;
         puzzleFrame[saveRandom] = '-';
@@ -200,7 +125,7 @@ char * generateStartEnd(char puzzleFrame[], int width, int height, char point) {
         return puzzleFrame;
     }
 }
-void savePosition(char point, int position, int width) {
+void savePosition(char point, int position, int width) { // Changes global variables to store current and end position
     switch (point) {
     
     case '#':
@@ -210,9 +135,8 @@ void savePosition(char point, int position, int width) {
         endPosition = position;
         break;
     }
-    printf("\ncurrentPosition: %d \nendPosition: %d\n", currentPosition, endPosition);
 }
-void filterEdge(char puzzleFrame[], int width, int height, int startingIndex, char point) {
+void filterEdge(char * puzzleFrame, int width, int height, int startingIndex, char point) { // Changes edge of puzzle to desired characters
     for (int leftColumn = startingIndex; leftColumn < (height - startingIndex); leftColumn++) {
         if (puzzleFrame[leftColumn * width + startingIndex] == '-') continue; 
         puzzleFrame[leftColumn * width + startingIndex] = point;
@@ -230,67 +154,80 @@ void filterEdge(char puzzleFrame[], int width, int height, int startingIndex, ch
         puzzleFrame[width - startingIndex - 1 + (rightCollumn * width)] = point;
     }
 } 
-int generateSolution( char * puzzleFrame, int width, int height) {
-    int choices[4];
-    printf("YA START: %d", findSolution(puzzleFrame, width, height));
-    while (findSolution(puzzleFrame, width, height) == 0) {
-        int tempData = deleteatbeginning();
-        for (int i = -1; i < 2; i += 2) {
-            if (puzzleFrame[tempData + i] == '$') {
-                puzzleFrame[tempData + i] = '*';
-                break;
-            }
-            if (puzzleFrame[tempData + (width * i)] == '$') {
-                puzzleFrame[tempData + (width * i)] = '*';
-                break;
-            }
+char * generateSolution( char * puzzleFrame, int width, int height) { // Begins process of creating a solution to the puzzle
+    int quadrantPosition = 2 * width;
+    for (int i = 0; i < ((height - 4) / 2); i++) {
+        for (int j = 0; j < ((width - 4) / 2); j++) {
+            quadrantPosition += 2;
+            puzzleFrame = findSolution(puzzleFrame, width, height, quadrantPosition);
         }
-        printList();
-        printPuzzleClear(puzzleFrame, width, height);
+        quadrantPosition += width + 4;
     }
-    printf("YA DUN");
-    return 0;
+    quadrantPosition = 2 * width + 2;
+    for (int i = 0; i < (height - 4); i++) {
+        for (int j = 0; j < (width - 4); j++) {
+            puzzleFrame = removeAtSign(puzzleFrame, width, height, quadrantPosition);
+            quadrantPosition++;
+        }
+        quadrantPosition += 4;
+    }
+    quadrantPosition = 2 * width + 2;
+    for (int i = 0; i < (height - 4); i++) {
+        for (int j = 0; j < (width - 4); j++) {
+            puzzleFrame = removeDiagonalDollar(puzzleFrame, width, height, quadrantPosition);
+            quadrantPosition++;
+        }
+        quadrantPosition += 4;
+    }
+    return puzzleFrame;
 }
-int findSolution(char * puzzleFrame, int width, int height) { // Checks for spot in this order: Left, Up, Right, Down
-    int count = 0;
-    if (currentPosition == endPosition) {
-        storePuzzle = (char*) malloc(sizeof(puzzleFrame));
-        memset(storePuzzle, '\0', sizeof(storePuzzle));
-        strcpy(storePuzzle, puzzleFrame);
-        printList();
-        printPuzzleClear(storePuzzle, width, height);
-        return 1;
-    }
-    for (int i = -1; i < 2; i += 2) {
-        int position = currentPosition + i;
-        if ((puzzleFrame[position] == '*') || (puzzleFrame[position] == '&') || position == endPosition) {
-            if (puzzleFrame[position] != '&') puzzleFrame[position] = '-';
-            currentPosition += i;
-            findSolution(puzzleFrame, width, height);
-            currentPosition -= i;
-            if (puzzleFrame[position] != '&') puzzleFrame[position] = '*';
-        }
-        position = currentPosition + (width * i);
-        if ((puzzleFrame[position] == '*') || (puzzleFrame[position] == '&') || position == endPosition) {
-            if (puzzleFrame[position] != '&') puzzleFrame[position] = '-';
-            currentPosition += width * i;
-            findSolution(puzzleFrame, width, height);
-            currentPosition -= width * i;
-            if (puzzleFrame[position] != '&') puzzleFrame[position] = '*';
-        }
-    }
-    for (int i = -1; i < 2; i += 2) {
-        if (puzzleFrame[currentPosition + i] == '*') count++;
-        if (puzzleFrame[currentPosition + (width * i)] == '*') count++;
-    }
-    printList();
-    if (count == 0 && findinlist(currentPosition) == 0) {
-        insertatend(currentPosition, width);
-        sortList();
-    }
-    return 0;
+char * removeAtSign(char * puzzleFrame, int width, int height, int position) { // Removes @ characters, which represent potential walls to make traversable
+    // Looks right, left, down, and then up centered at position to check for @
+    if (puzzleFrame[position] != '@') return puzzleFrame;
+    if (puzzleFrame[position + 1] == '*' && puzzleFrame[position - width] == '*' && puzzleFrame[position - width + 1] == '*') {puzzleFrame[position] = '$'; return puzzleFrame;}
+    if (puzzleFrame[position - 1] == '*' && puzzleFrame[position - width] == '*' && puzzleFrame[position - width - 1] == '*') {puzzleFrame[position] = '$'; return puzzleFrame;}
+    if (puzzleFrame[position + 1] == '*' && puzzleFrame[position + width] == '*' && puzzleFrame[position + width + 1] == '*') {puzzleFrame[position] = '$'; return puzzleFrame;}
+    if (puzzleFrame[position - 1] == '*' && puzzleFrame[position + width] == '*' && puzzleFrame[position + width - 1] == '*') {puzzleFrame[position] = '$'; return puzzleFrame;}
+    puzzleFrame[position] = '*';
+    return puzzleFrame;
 }
-int generateBranches(char * puzzleFrame, int width, int height) { 
+char * removeDiagonalDollar(char * puzzleFrame, int width, int height, int position) { // Removes diagonal walls to make each area accessible
+    if (puzzleFrame[position] == '$' && puzzleFrame[position + width - 1] == '$') {
+        if (puzzleFrame[position - 1] == '*' && puzzleFrame[position + width] == '*') {
+            puzzleFrame[position] = '*';
+            return puzzleFrame;
+        }
+    }
+    if (puzzleFrame[position] == '$' && puzzleFrame[position + width + 1] == '$') {
+        if (puzzleFrame[position + 1] == '*' && puzzleFrame[position - width] == '*') {
+            puzzleFrame[position] = '*';
+            return puzzleFrame;
+        }
+    }
+    return puzzleFrame;
+}
+char * freeExits(char * puzzleFrame, int width, int height, int position) { // Makes sure the beginning and end are free of walls
+    if (puzzleFrame[position - 1] == '*' || puzzleFrame[position + 1] == '*' || puzzleFrame[position - width] == '*' || puzzleFrame[position + width] == '*') {
+        puzzleFrame[position] = '*';
+        return puzzleFrame;
+    }
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) if (puzzleFrame[position - width - 1 + j + (width * i)] == '$') puzzleFrame[position - width - 1 + j + (width * i)] = '*';
+    puzzleFrame[position] = '*';
+    return puzzleFrame;
+}
+char * findSolution(char * puzzleFrame, int width, int height, int position) { // Checks for spot in this order: Left, Up, Right, Down
+    if (puzzleFrame[position] == '*' && puzzleFrame[position - 2] == '*' && puzzleFrame[position - 1] == '$') {puzzleFrame[position - 1] = '@'; return puzzleFrame;}
+    if (puzzleFrame[position + width] == '*' && puzzleFrame[position + width - 2] == '*' && puzzleFrame[position + width - 1] == '$') {puzzleFrame[position + width - 1] = '@'; return puzzleFrame;}
+    if (puzzleFrame[position + width] == '*' && puzzleFrame[position + 3 * width] == '*' && puzzleFrame[position + 2 * width] == '$') {puzzleFrame[position + 2 * width] = '@'; return puzzleFrame;}
+    if (puzzleFrame[position + width + 1] == '*' && puzzleFrame[position + 1 + 3 * width] == '*' && puzzleFrame[position + 1 + 2 * width] == '$') {puzzleFrame[position + 1 + 2 * width] = '@'; return puzzleFrame;}
+    if (puzzleFrame[position + width + 1] == '*' && puzzleFrame[position + width + 3] == '*' && puzzleFrame[position + width + 2] == '$') {puzzleFrame[position + width + 2] = '@'; return puzzleFrame;}
+    if (puzzleFrame[position + 1] == '*' && puzzleFrame[position + 3] == '*' && puzzleFrame[position + 2] == '$') {puzzleFrame[position + 2] = '@'; return puzzleFrame;}
+    if (puzzleFrame[position + 1] == '*' && puzzleFrame[position + 1 - 2 * width] == '*' && puzzleFrame[position - width + 2] == '$') {puzzleFrame[position - width + 2] = '@'; return puzzleFrame;}
+    if (puzzleFrame[position] == '*' && puzzleFrame[position - 2 * width] == '*' && puzzleFrame[position - width] == '$') {puzzleFrame[position - width] = '@';  return puzzleFrame;}
+    return puzzleFrame;
+}
+int generateBranches(char * puzzleFrame, int width, int height) { // Generates randomly the walls in the maze
     int widthQuadrantAmount = (width - 4) / 2;
     int heightQuadrantAmount = (height - 4) / 2;
     int quadrantPosition = 2 * width;
@@ -299,7 +236,7 @@ int generateBranches(char * puzzleFrame, int width, int height) {
         quadrantPosition += width + (width % 2) + 4;
     }
 }
-char * generateBranchesHelper(char * puzzleFrame, int width, int height, int * quadrantPosition) {
+char * generateBranchesHelper(char * puzzleFrame, int width, int height, int * quadrantPosition) { // Chooses how to lay out the maze walls
     int pickRowOrColumn = rand() % 2;
     int saveRandomRow = rand() % 2;
     int saveRandomColumn = rand() % 2;
@@ -324,7 +261,7 @@ char * generateBranchesHelper(char * puzzleFrame, int width, int height, int * q
     }
     return puzzleFrame;
 }
-char * removeWideSpace(char * puzzleFrame, int width, int height) {
+char * removeWideSpace(char * puzzleFrame, int width, int height) { // Removes some 2 x 2 squares of open space without a greater reason
     int widthQuadrantAmount = width - 4;
     int heightQuadrantAmount = height - 4;
     int quadrantPosition = 2 * width + 1;
@@ -339,7 +276,7 @@ char * removeWideSpace(char * puzzleFrame, int width, int height) {
     }
     return puzzleFrame;
 }
-char * removeWideSpaceHelper(char * puzzleFrame, int quadrantPosition, int width) {
+char * removeWideSpaceHelper(char * puzzleFrame, int quadrantPosition, int width) { // Chooses what space to make a wall
     switch (rand() % 4) { // 0 = Up Left, 1 = Up Right, 2 = Down Left, 3 = Down Right
 
     case 0:
@@ -357,16 +294,40 @@ char * removeWideSpaceHelper(char * puzzleFrame, int quadrantPosition, int width
     }
     return puzzleFrame;
 }
-// Checks for spot in this order: Up, Left, Down, Right
-int solvePuzzle(char * puzzleFrame, int width, int height) {
-    if (puzzleFrame[0] == '&') {printPuzzleClear(puzzleFrame, width, height); return 0;}
-    for (int i = -1; i < 2; i += 2) {
-        if ((puzzleFrame[0 + i] == '-') || (puzzleFrame[0] == '&')) {
-
+char * smartRemoveWideSpace(char * puzzleFrame, int width, int height) { // Adds wall to some 2 x 2 open spaces depending on if it will prevent access to an area or not
+    int quadrantPosition = 2 * width + 1;
+    for (int i = 1; i <= (height - 4); i++) {
+        for (int j = 1; j <= (width - 4); j++) {
+            quadrantPosition += 1;
+            if (puzzleFrame[quadrantPosition] != '*' || puzzleFrame[quadrantPosition + 1] != '*') continue;
+            if (puzzleFrame[quadrantPosition + width] != '*' || puzzleFrame[quadrantPosition + width + 1] != '*') continue;
+            for (int i = 0; i < 2; i++) puzzleFrame = smartRemoveWideSpaceHelper(puzzleFrame, (quadrantPosition + i), width);
+            for (int i = 0; i < 2; i++) puzzleFrame = smartRemoveWideSpaceHelper(puzzleFrame, (quadrantPosition + width + i), width);
         }
-        if ((puzzleFrame[0] == '-') || (puzzleFrame[0] == '&')){
-            
-        }
+        quadrantPosition += 4;
     }
-    return 0;
+    return puzzleFrame;
+}
+char * smartRemoveWideSpaceHelper(char * puzzleFrame, int position, int width) { // Makes sure that wall will not block off other part of maze
+    int count = 0;
+    int storePosition = position;
+    position -= width;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 2; j++) if (puzzleFrame[position + (width * i) + j] == '$') count++;
+    if (count >= 2) return puzzleFrame;
+    count = 0;
+    position += (width - 1);
+    for (int i = 0; i < 2; i++)
+        for (int j = 0; j < 3; j++) if (puzzleFrame[position + (width * i) + j] == '$') count++;
+    if (count >= 2) return puzzleFrame;
+    count = 0;
+    position -= width;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 2; j++) if (puzzleFrame[position + (width * i) + j] == '$') count++;
+    count = 0;
+    for (int i = 0; i < 2; i++)
+        for (int j = 0; j < 3; j++) if (puzzleFrame[position + (width * i) + j] == '$') count++;
+    if (count >= 2) return puzzleFrame;
+    puzzleFrame[storePosition] = '$';
+    return puzzleFrame;
 }
